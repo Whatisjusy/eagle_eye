@@ -1,12 +1,13 @@
 from PyQt5.QtWidgets import (
     QWidget, QLabel, QVBoxLayout, QPushButton, QSpinBox, QTreeWidget, QTreeWidgetItem, QListWidget,
-    QTabWidget, QMessageBox, QFormLayout, QDialog, QDialogButtonBox
+    QTabWidget, QMessageBox, QFormLayout, QDialog, QDialogButtonBox, QProgressBar, QApplication
 )
-from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtCore import pyqtSignal, Qt, QTimer
 import logging
+import json  # Add this import for handling JSON operations
 from .app_tracker_utils import app_tracker_utils, save_session_data, load_session_data
 from .tracker_thread import TrackerThread
-from .config import settings, FILE_PATHS
+from .config import settings, FILE_PATHS, reset_settings
 
 # Initialize logging
 logging.basicConfig(filename=FILE_PATHS["DEBUG_FILE"], level=logging.DEBUG, format='%(asctime)s %(message)s')
@@ -20,6 +21,7 @@ class AppTracker(QWidget):
         self.tracker_thread.update_list_signal.connect(self.update_live_list)
         self.tracker_thread.update_debug_signal.connect(self.update_debug_log)
         self.tracker_thread.start()
+        self.refresh_debug_log()
         logging.info("AppTracker initialized and tracker thread started.")
 
     def initUI(self):
@@ -43,6 +45,10 @@ class AppTracker(QWidget):
             self.live_tree.setHeaderLabels(["Application", "Window", "Time Spent"])
             self.live_tree.header().setStyleSheet("QHeaderView::section { background-color: #444444; color: #ffffff; }")
             layout.addWidget(self.live_tree)
+
+            self.progress_bar = QProgressBar()
+            self.progress_bar.setRange(0, 100)
+            layout.addWidget(self.progress_bar)
 
             self.reset_button = QPushButton("Reset Progress")
             self.reset_button.setToolTip("Click to reset the progress tracking")
@@ -82,6 +88,11 @@ class AppTracker(QWidget):
             self.hourly_wage_box.setValue(settings.get("hourly_wage", 10))
             self.hourly_wage_box.setToolTip("Set your hourly wage in dollars")
             self.hourly_wage_box.valueChanged.connect(self.update_settings)
+
+            self.reset_settings_button = QPushButton("Reset Settings")
+            self.reset_settings_button.setToolTip("Click to reset settings to default values")
+            self.reset_settings_button.clicked.connect(self.reset_settings)
+            settings_layout.addRow(self.reset_settings_button)
 
             settings_layout.addRow(QLabel("Inactivity Timeout (sec):"), self.inactivity_box)
             settings_layout.addRow(QLabel("CPU Threshold (%):"), self.cpu_box)
@@ -149,9 +160,25 @@ class AppTracker(QWidget):
             with open(FILE_PATHS["SETTINGS_FILE"], "w") as f:
                 json.dump(settings, f)
             logging.info("Settings updated.")
+            QMessageBox.information(self, "Settings Updated", "Settings have been updated successfully.")
         except Exception as e:
             logging.error(f"Error updating settings: {e}")
             QMessageBox.critical(self, "Error", f"An error occurred while updating the settings: {e}")
+
+    def reset_settings(self):
+        try:
+            global settings
+            settings = reset_settings()
+            self.inactivity_box.setValue(settings["inactivity_timeout"])
+            self.cpu_box.setValue(settings["cpu_threshold"])
+            self.hourly_wage_box.setValue(settings["hourly_wage"])
+            self.cpu_box.setValue(settings["cpu_threshold"])
+            self.hourly_wage_box.setValue(settings["hourly_wage"])
+            QMessageBox.information(self, "Settings Reset", "Settings have been reset to default values.")
+            logging.info("Settings reset to default values.")
+        except Exception as e:
+            logging.error(f"Error resetting settings: {e}")
+            QMessageBox.critical(self, "Error", f"An error occurred while resetting the settings: {e}")
 
     def update_status(self, text):
         try:
@@ -163,15 +190,19 @@ class AppTracker(QWidget):
 
     def update_live_list(self, apps):
         try:
+            logging.debug(f"update_live_list called with apps: {apps}")
             self.live_tree.clear()
             for category, app_times in apps.items():
+                logging.debug(f"Processing category: {category}")
                 for app, window_times in app_times.items():
+                    logging.debug(f"Processing app: {app} with window_times: {window_times}")
                     if not isinstance(window_times, dict):
                         app_tracker_utils.log_debug(f"Error: window_times is not a dict for app {app} in category {category}: {window_times}", error=True)
                         continue
                     app_item = self.find_or_create_app_item(app)
                     total_time = 0
                     for window, time_spent in window_times.items():
+                        logging.debug(f"Processing window: {window} with time_spent: {time_spent}")
                         formatted_time = self.format_time(time_spent)
                         window_item = self.find_or_create_window_item(app_item, window)
                         window_item.setText(2, formatted_time)
@@ -221,6 +252,14 @@ class AppTracker(QWidget):
             QMessageBox.critical(self, "Error", f"An error occurred while formatting the time: {e}")
             return "0h 0m 0s"
 
+    def refresh_debug_log(self):
+        try:
+            self.update_debug_log("\n".join(app_tracker_utils.debug_logs))
+            QTimer.singleShot(1000, self.refresh_debug_log)  # Refresh every second
+        except Exception as e:
+            logging.error(f"Error refreshing debug log: {e}")
+            QMessageBox.critical(self, "Error", f"An error occurred while refreshing the debug log: {e}")
+
     def update_debug_log(self, log_text):
         try:
             self.debug_list.clear()
@@ -253,6 +292,7 @@ class AppTracker(QWidget):
             self.tracker_thread.stop()
             dialog = EndSessionDialog(app_tracker_utils.active_apps, settings.get("hourly_wage", 10), self)
             if dialog.exec_() == QDialog.Accepted:
+                save_session_data(app_tracker_utils.active_apps)  # Pass the required 'data' argument
                 self.reset_progress()
             logging.info("Session ended.")
         except Exception as e:

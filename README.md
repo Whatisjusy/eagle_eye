@@ -14,16 +14,14 @@ Ensure you have the following dependencies installed:
 - PyQt5
 - psutil
 - pynput
-- win32api
-- win32gui
-- win32process
+- pywin32
 
 ### Setup
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/Whatisjusy/eagle_eye.git
-   cd eagle_eye
+   git clone https://github.com/your-username/eagle-eye.git
+   cd eagle-eye
    ```
 
 2. Create a virtual environment and activate it:
@@ -43,7 +41,7 @@ Ensure you have the following dependencies installed:
 
 To start Eagle Eye, run the following command:
 ```bash
-python -m eagle_eye
+python src/main.py
 ```
 
 ### UI Walkthrough
@@ -61,18 +59,20 @@ python -m eagle_eye
 
 ```
 eagle-eye/
-├── gui.py                # GUI components and main application window
-├── utils/
+├── src/
 │   ├── app_tracker_utils.py  # Utility functions for tracking applications
 │   ├── config.py             # Configuration settings and constants
+│   ├── gui.py                # GUI components and main application window
+│   ├── main.py               # Main script to run the application
+│   ├── tracker_thread.py     # Thread for tracking applications
 ├── tests/
 │   ├── test_app_tracker_utils.py  # Unit tests for app_tracker_utils.py
 │   ├── test_gui.py                # Unit tests for gui.py
-├── .pylintrc              # Pylint configuration file
-├── .flake8                # Flake8 configuration file
-├── .gitignore             # Git ignore file
-├── CONTRIBUTING.md        # Contribution guidelines
-├── README.md              # Project documentation
+├── .pylintrc.ini            # Pylint configuration file
+├── .flake8.ini              # Flake8 configuration file
+├── .gitignore               # Git ignore file
+├── README.md                # Project documentation
+├── requirements.txt         # Project dependencies
 ```
 
 ## Contribution Guidelines
@@ -85,7 +85,9 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Code of Conduct
 
-Please note that this project is released with a [Contributor Code of Conduct](CODE_OF_CONDUCT.md). By participating in this project you agree to abide by its terms.
+We as members, contributors, and leaders pledge to make participation in our community a harassment-free experience for everyone, regardless of age, body size, visible or invisible disability, ethnicity, sex characteristics, gender identity and expression, level of experience, education, socio-economic status, nationality, personal appearance, race, religion, or sexual identity and orientation.
+
+We pledge to act and interact in ways that contribute to an open, welcoming, diverse, inclusive, and healthy community.
 
 ## Author
 

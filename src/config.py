@@ -21,8 +21,18 @@ DEFAULTS = {
 # ✅ Load or Initialize Settings
 def load_settings():
     if os.path.exists(FILE_PATHS["SETTINGS_FILE"]):
-        with open(FILE_PATHS["SETTINGS_FILE"], "r") as f:
-            return json.load(f)
+        try:
+            with open(FILE_PATHS["SETTINGS_FILE"], "r") as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            # Log the error and return default settings
+            print("Error decoding JSON from settings file. Using default settings.")
+            return DEFAULTS.copy()
+    return DEFAULTS.copy()
+
+def reset_settings():
+    with open(FILE_PATHS["SETTINGS_FILE"], "w") as f:
+        json.dump(DEFAULTS, f)
     return DEFAULTS.copy()
 
 settings = load_settings()
